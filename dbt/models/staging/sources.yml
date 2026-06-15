@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    tables:
+      - name: calibration_measurements
+        description: "Raw calibration measurements for all instruments"
+        columns:
+          - name: instrument_id
+            tests: [not_null]
+          - name: measurement_date
+            tests: [not_null]
+          - name: measured_value
+            tests: [not_null]
+          - name: reference_value
+            tests: [not_null]
+          - name: replicate
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+
+      - name: environmental_conditions
+        description: "Daily environmental conditions in the laboratory"
+        columns:
+          - name: date
+            tests: [not_null, unique]
+          - name: temp_c
+            tests: [not_null]
+          - name: humidity_pct
+            tests: [not_null]

@@ -49,15 +49,33 @@ def init_bronze(conn: duckdb.DuckDBPyConnection) -> None:
 
 def load_measurements(conn: duckdb.DuckDBPyConnection) -> int:
     df = pd.read_csv(RAW_PATH / "calibration_measurements.csv", parse_dates=["measurement_date"])
+    df = df.reset_index(drop=True)
     conn.execute("DELETE FROM bronze.calibration_measurements")
-    conn.execute("INSERT INTO bronze.calibration_measurements SELECT *, CURRENT_TIMESTAMP FROM df")
+    conn.register("df", df)
+    conn.execute("""
+        INSERT INTO bronze.calibration_measurements
+        SELECT
+            instrument_id, instrument_name, sublab, magnitude, unit,
+            measurement_date, replicate, reference_value, measured_value,
+            error, uncertainty, in_tolerance, temp_c, humidity_pct,
+            pressure_hpa, CURRENT_TIMESTAMP
+        FROM df
+    """)
+    conn.unregister("df")
     return len(df)
 
 
 def load_environmental(conn: duckdb.DuckDBPyConnection) -> int:
     df = pd.read_csv(RAW_PATH / "environmental_conditions.csv", parse_dates=["date"])
+    df = df.reset_index(drop=True)
     conn.execute("DELETE FROM bronze.environmental_conditions")
-    conn.execute("INSERT INTO bronze.environmental_conditions SELECT *, CURRENT_TIMESTAMP FROM df")
+    conn.register("df", df)
+    conn.execute("""
+        INSERT INTO bronze.environmental_conditions
+        SELECT date, temp_c, humidity_pct, pressure_hpa, CURRENT_TIMESTAMP
+        FROM df
+    """)
+    conn.unregister("df")
     return len(df)
 
 

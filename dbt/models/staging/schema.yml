@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_calibration_measurements
+    description: "Cleaned and validated calibration measurements"
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: measurement_date
+        tests: [not_null]
+      - name: measured_value
+        tests: [not_null]
+      - name: expanded_uncertainty_k2
+        tests: [not_null]
+      - name: replicate
+        tests:
+          - accepted_values:
+              values: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+
+  - name: stg_environmental_conditions
+    description: "Daily lab environmental conditions with compliance flag"
+    columns:
+      - name: condition_date
+        tests: [not_null, unique]
+      - name: within_lab_conditions
+        tests: [not_null]

@@ -25,7 +25,7 @@ INSTRUMENTS = {
 
 START_DATE = date(2025, 1, 1)
 END_DATE   = date(2025, 12, 31)
-REPS       = 150  # mediciones repetidas por día por instrumento
+REPS       = 20   # mediciones repetidas por día por instrumento
 
 def generate_environmental_conditions(dates: list[date]) -> pd.DataFrame:
     n = len(dates)
