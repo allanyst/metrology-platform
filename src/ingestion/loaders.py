@@ -3,8 +3,11 @@ import duckdb
 import pandas as pd
 from pathlib import Path
 
-DB_PATH  = Path(__file__).parent.parent.parent / "data" / "db" / "metrology.duckdb"
-RAW_PATH = Path(__file__).parent.parent.parent / "data" / "raw"
+import os
+
+_db_env  = os.environ.get("METROLOGY_DB_PATH")
+DB_PATH  = Path(_db_env) if _db_env else Path(__file__).parent.parent.parent / "data" / "db" / "metrology.duckdb"
+RAW_PATH = DB_PATH.parent.parent / "raw"
 
 
 def get_connection() -> duckdb.DuckDBPyConnection:

@@ -3,7 +3,9 @@ import numpy as np
 import duckdb
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "data" / "db" / "metrology.duckdb"
+import os
+_db_env = os.environ.get("METROLOGY_DB_PATH")
+DB_PATH = Path(_db_env) if _db_env else Path(__file__).parent.parent / "data" / "db" / "metrology.duckdb"
 
 TOLERANCE = {
     "BAL-001": 0.0002,
