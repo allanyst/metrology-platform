@@ -1,0 +1,104 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.8.1-python3.11
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./src:/opt/airflow/src
+    - ./models:/opt/airflow/models
+    - ./data/db:/opt/data/db
+    - /var/run/docker.sock:/var/run/docker.sock
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+
+  airflow-init:
+    <<: *airflow-common
+    command: >
+      bash -c "pip install duckdb psycopg2-binary -q &&
+               airflow db init &&
+               airflow users create --username admin --password admin
+               --firstname Admin --lastname Admin --role Admin
+               --email admin@example.com"
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: >
+      bash -c "pip install duckdb psycopg2-binary -q &&
+               airflow webserver"
+    ports:
+      - "8080:8080"
+    group_add:
+      - "1001"
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: >
+      bash -c "pip install duckdb psycopg2-binary -q &&
+               airflow scheduler"
+    group_add:
+      - "1001"
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  dbt:
+    image: python:3.11-slim
+    working_dir: /opt/dbt
+    volumes:
+      - ./dbt:/opt/dbt
+      - ./data/db:/opt/data/db
+    environment:
+      METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
+    command: >
+      bash -c "pip install dbt-core==1.8.2 dbt-duckdb==1.8.4 -q && tail -f /dev/null"
+    restart: always
+
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/db:/opt/data/db
+    environment:
+      METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
+    restart: always
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data/db:/opt/data/db
+    environment:
+      METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
+    restart: always
