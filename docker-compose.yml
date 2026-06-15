@@ -15,7 +15,7 @@ x-airflow-common: &airflow-common
     - ./airflow/logs:/opt/airflow/logs
     - ./src:/opt/airflow/src
     - ./models:/opt/airflow/models
-    - ./data/db:/opt/data/db
+    - ./data:/opt/data
     - /var/run/docker.sock:/var/run/docker.sock
   depends_on:
     postgres:
@@ -37,18 +37,13 @@ services:
 
   airflow-init:
     <<: *airflow-common
-    command: >
-      bash -c "pip install duckdb psycopg2-binary -q &&
-               airflow db init &&
-               airflow users create --username admin --password admin
-               --firstname Admin --lastname Admin --role Admin
-               --email admin@example.com"
+    command: bash -c "pip install duckdb pandas numpy scipy scikit-learn -q && airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname Admin --role Admin --email admin@example.com"
     restart: "no"
 
   airflow-webserver:
     <<: *airflow-common
     command: >
-      bash -c "pip install duckdb psycopg2-binary -q &&
+      bash -c "pip install duckdb pandas numpy scipy scikit-learn -q &&
                airflow webserver"
     ports:
       - "8080:8080"
@@ -62,7 +57,7 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: >
-      bash -c "pip install duckdb psycopg2-binary -q &&
+      bash -c "pip install duckdb pandas numpy scipy scikit-learn -q &&
                airflow scheduler"
     group_add:
       - "1001"
@@ -76,7 +71,8 @@ services:
     working_dir: /opt/dbt
     volumes:
       - ./dbt:/opt/dbt
-      - ./data/db:/opt/data/db
+      - ./dbt/profiles:/root/.dbt
+      - ./data:/opt/data
     environment:
       METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
     command: >
@@ -88,7 +84,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data/db:/opt/data/db
+      - ./data:/opt/data
     environment:
       METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
     restart: always
@@ -98,7 +94,7 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./data/db:/opt/data/db
+      - ./data:/opt/data
     environment:
       METROLOGY_DB_PATH: /opt/data/db/metrology.duckdb
     restart: always

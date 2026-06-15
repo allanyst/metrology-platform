@@ -22,7 +22,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from api.routers import instruments, trends, uncertainty
+from routers import instruments, trends, uncertainty
 app.include_router(instruments.router)
 app.include_router(trends.router)
 app.include_router(uncertainty.router)

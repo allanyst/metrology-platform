@@ -1,0 +1,7 @@
+metrology_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /opt/data/db/metrology.duckdb
+      threads: 4
