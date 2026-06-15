@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from main import get_db
+import duckdb
 
 router = APIRouter(prefix="/instruments", tags=["instruments"])
 
 
 @router.get("/")
-def get_all_instruments(request: Request):
-    conn = request.app.state.db
+def get_all_instruments(conn: duckdb.DuckDBPyConnection = Depends(get_db)):
     rows = conn.execute("""
         SELECT
             cs.instrument_id,
@@ -35,8 +36,7 @@ def get_all_instruments(request: Request):
 
 
 @router.get("/{instrument_id}")
-def get_instrument(instrument_id: str, request: Request):
-    conn = request.app.state.db
+def get_instrument(instrument_id: str, conn: duckdb.DuckDBPyConnection = Depends(get_db)):
     row = conn.execute("""
         SELECT
             cs.*,

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from main import get_db
+import duckdb
 
 router = APIRouter(prefix="/trends", tags=["trends"])
 
@@ -6,11 +8,9 @@ router = APIRouter(prefix="/trends", tags=["trends"])
 @router.get("/{instrument_id}")
 def get_trends(
     instrument_id: str,
-    request: Request,
     days: int = Query(default=90, ge=7, le=365),
+    conn: duckdb.DuckDBPyConnection = Depends(get_db),
 ):
-    conn = request.app.state.db
-
     exists = conn.execute(
         "SELECT COUNT(*) FROM gold.fact_calibration_status WHERE instrument_id = ?",
         [instrument_id]

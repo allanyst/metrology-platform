@@ -64,4 +64,4 @@ with DAG(
         python_callable=run_predictive,
     )
 
-    ingest_task >> dbt_run_task >> dbt_test_task >> [monte_carlo_task, predictive_task]
+    ingest_task >> dbt_run_task >> dbt_test_task >> monte_carlo_task >> predictive_task

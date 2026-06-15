@@ -9,17 +9,17 @@ DB_PATH = os.environ.get(
     str(Path(__file__).parent.parent / "data" / "db" / "metrology.duckdb")
 )
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.db = duckdb.connect(DB_PATH, read_only=True)
-    yield
-    app.state.db.close()
+def get_db():
+    conn = duckdb.connect(DB_PATH, read_only=True)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 app = FastAPI(
     title="Metrology QC & Traceability API",
     description="REST API over the Gold layer of the Metrology QC pipeline",
     version="1.0.0",
-    lifespan=lifespan,
 )
 
 from routers import instruments, trends, uncertainty

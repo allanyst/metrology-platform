@@ -19,17 +19,18 @@ st.set_page_config(
     layout="wide",
 )
 
-@st.cache_resource
-def get_connection():
-    return duckdb.connect(DB_PATH, read_only=True)
-
-conn = get_connection()
+def query(sql: str, params: list | None = None) -> pd.DataFrame:
+    conn = duckdb.connect(DB_PATH, read_only=True)
+    try:
+        return conn.execute(sql, params or []).fetchdf()
+    finally:
+        conn.close()
 
 st.title("🔬 Metrology QC & Traceability Platform")
 st.caption("Real-time calibration monitoring | ISO 17025 compliant")
 
 # ── Status cards ──────────────────────────────────────────────────────────────
-status_df = conn.execute("""
+status_df = query("""
     SELECT cs.instrument_id, cs.instrument_name, cs.sublab,
            cs.overall_status, cs.control_zone,
            pm.risk_level, pm.days_to_failure,
@@ -38,7 +39,7 @@ status_df = conn.execute("""
     LEFT JOIN gold.fact_predictive_maintenance pm USING (instrument_id)
     LEFT JOIN gold.fact_uncertainty u USING (instrument_id)
     ORDER BY cs.instrument_id
-""").fetchdf()
+""")
 
 STATUS_COLOR = {"OK": "🟢", "WARNING": "🟡", "OUT_OF_TOLERANCE": "🔴", "CRITICAL": "🔴"}
 RISK_COLOR   = {"LOW": "🟢", "MEDIUM": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}
@@ -63,7 +64,7 @@ with col1:
 with col2:
     days = st.slider("Days to show", 30, 365, 90)
 
-chart_df = conn.execute("""
+chart_df = query("""
     SELECT measurement_date, mean_error,
            lt_mean_error, ucl_1s, lcl_1s,
            ucl_2s, lcl_2s, ucl_3s, lcl_3s,
@@ -73,7 +74,7 @@ chart_df = conn.execute("""
       AND measurement_date >= (SELECT MAX(measurement_date) FROM gold.fact_control_charts
                                WHERE instrument_id = ?) - INTERVAL (?) DAY
     ORDER BY measurement_date
-""", [selected, selected, days]).fetchdf()
+""", [selected, selected, days])
 
 fig = go.Figure()
 fig.add_trace(go.Scatter(x=chart_df["measurement_date"], y=chart_df["ucl_3s"],
@@ -114,12 +115,12 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Days to Failure by Instrument")
-    pm_df = conn.execute("""
+    pm_df = query("""
         SELECT instrument_id, days_to_failure, risk_level, trend
         FROM gold.fact_predictive_maintenance
         WHERE days_to_failure IS NOT NULL
         ORDER BY days_to_failure
-    """).fetchdf()
+    """)
 
     color_map = {"LOW": "green", "MEDIUM": "gold", "HIGH": "orange", "CRITICAL": "red"}
     fig2 = px.bar(pm_df, x="instrument_id", y="days_to_failure",
@@ -130,11 +131,11 @@ with col1:
 
 with col2:
     st.subheader("Expanded Uncertainty U(k=2)")
-    unc_df = conn.execute("""
+    unc_df = query("""
         SELECT instrument_id, u_type_a, u_type_b, u_combined, u_expanded_k2
         FROM gold.fact_uncertainty
         ORDER BY u_expanded_k2 DESC
-    """).fetchdf()
+    """)
 
     fig3 = go.Figure()
     fig3.add_trace(go.Bar(name="U type A", x=unc_df["instrument_id"],
