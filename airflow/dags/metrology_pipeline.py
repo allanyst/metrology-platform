@@ -7,7 +7,7 @@ sys.path.insert(0, '/opt/airflow')
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def run_ingestion(**context):
@@ -42,26 +42,36 @@ with DAG(
     ingest_task = PythonOperator(
         task_id="ingest_bronze",
         python_callable=run_ingestion,
+        retries=3,
+        retry_delay=timedelta(seconds=10),
     )
 
     dbt_run_task = BashOperator(
         task_id="dbt_run",
         bash_command="docker exec metrology-platform-dbt-1 dbt run --profiles-dir /root/.dbt",
+        retries=3,
+        retry_delay=timedelta(seconds=5),
     )
 
     dbt_test_task = BashOperator(
         task_id="dbt_test",
         bash_command="docker exec metrology-platform-dbt-1 dbt test --profiles-dir /root/.dbt",
+        retries=3,
+        retry_delay=timedelta(seconds=5),
     )
 
     monte_carlo_task = PythonOperator(
         task_id="monte_carlo",
         python_callable=run_monte_carlo,
+        retries=3,
+        retry_delay=timedelta(seconds=5),
     )
 
     predictive_task = PythonOperator(
         task_id="predictive_maintenance",
         python_callable=run_predictive,
+        retries=3,
+        retry_delay=timedelta(seconds=5),
     )
 
     ingest_task >> dbt_run_task >> dbt_test_task >> monte_carlo_task >> predictive_task
