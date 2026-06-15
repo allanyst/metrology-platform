@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: fact_instrument_stats
+    description: "Daily statistical summary per instrument: mean, std, uncertainty type A"
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: measurement_date
+        tests: [not_null]
+      - name: n_replicates
+        tests: [not_null]
+      - name: daily_status
+        tests:
+          - accepted_values:
+              values: ['OK', 'WARNING', 'OUT_OF_TOLERANCE']
+
+  - name: fact_control_charts
+    description: "Levey-Jennings control chart data with Western Electric flags"
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: measurement_date
+        tests: [not_null]
+      - name: control_zone
+        tests:
+          - accepted_values:
+              values: ['WITHIN_1S', 'BEYOND_1S', 'BEYOND_2S', 'BEYOND_3S']
+
+  - name: fact_calibration_status
+    description: "Current calibration status per instrument — consumed by FastAPI"
+    columns:
+      - name: instrument_id
+        tests: [not_null, unique]
+      - name: overall_status
+        tests:
+          - accepted_values:
+              values: ['OK', 'WARNING', 'OUT_OF_TOLERANCE', 'CRITICAL']
